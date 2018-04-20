@@ -21,7 +21,7 @@ _
 
 ## Setup Basic
 
-Simplest configuration a nuget restore which will run when webpack has finished compilation will happen by using the runHook, (you can also change _when_ the `runHook` method) In `webpack.config.js`:
+Simplest configuration a nuget commands which will run when webpack has finished compilation will happen by using the runHook, (you can also change _when_ the `runHook` method) In `webpack.config.js`:
 
 By default it will run in 'restore' mode, you can change this by using the `args` configuration options:
 

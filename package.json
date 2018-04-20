@@ -1,6 +1,6 @@
 {
   "name": "webpack-nuget-plugin",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A webpack plugin to run nuget commands during compilation time.",
   "main": "lib/index.js",
   "scripts": {
