@@ -15,6 +15,8 @@ export default class Nuget {
             solutionPath : undefined,
             // can use mono if needed
             monoPath: null,
+            // default arguments
+            args : ['restore'],
             // can pass additional arguments to the nuget exe package
             additionalArgs: [],
             // custom callbacks to the output console
@@ -169,7 +171,11 @@ export default class Nuget {
         }
         this.runHook('onStart', output);
         this.log(output);
-		let cmdArgs = ["restore"],
+        if (!this.options.args || !this.options.args.length) this.error({
+            type : 'error',
+            msg : `options.args is a required argument and must contain at least one argument. Default should be ['restore']`
+        })
+		let cmdArgs = this.options.args,
 			targetFile = this.options.nugetPath;
 		if (this.options.additionalArgs && this.options.additionalArgs.length) cmdArgs = cmdArgs.concat(this.options.additionalArgs);
 		if (this.options.monoPath && this.options.monoPath.length > 0) {

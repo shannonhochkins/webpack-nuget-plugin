@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/dm/webpack-nuget-plugin.svg)]()
 # Webpack Nuget Plugin
 
-This plugin allows you to run nuget restore at a specific times using the Webpack compilation hooks. This plugin is shipped with the Nuget.exe so we don't have to find it, however you can also point to a different one using the configuration options.
+This plugin allows you to run nuget restore at a specific times using the Webpack compilation hooks. This plugin is shipped with the Nuget.exe (v3.4.4.1321)so we don't have to automatically locate it, however you can also point to a different one using the configuration options.
 
 _This plugin was built for Windows 10 and Windows Server 2012 - it is not tested in any other OS and most likely will have issues. Written in Node v9 for webpack 4, webpack 3 won't work as they've changed the hook functionality (can work with very little work)_
 
@@ -11,7 +11,7 @@ _This plugin was built for Windows 10 and Windows Server 2012 - it is not tested
 1. [Installation](#installation)
 2. [Setup Basic](#setup-basic)
 3. [Setup Advanced](#setup-advanced)
-4. [Custom Run Restore Function](#custom-run-restore-function)
+4. [Custom Run Hook](#custom-run-hook)
 5. [Custom Logger](#custom-logger)
 
 _
@@ -21,7 +21,9 @@ _
 
 ## Setup Basic
 
-Simplest configuration a nuget restore which will run when webpack has finished compilation will happen by using the restore, (you can also change _when_ the `runRestore` method) In `webpack.config.js`:
+Simplest configuration a nuget restore which will run when webpack has finished compilation will happen by using the runHook, (you can also change _when_ the `runHook` method) In `webpack.config.js`:
+
+By default it will run in 'restore' mode, you can change this by using the `args` configuration options:
 
 ```js
 const WebpackNugetPlugin = require('webpack-nuget-plugin');
@@ -40,7 +42,7 @@ module.exports = {
 
 ## Setup Advanced
 
-Extended functionality/configuration and all their defaults, this outlines the possiblity with hooks, console, runRestore and the other options that are possible for this plugin.
+Extended functionality/configuration and all their defaults, this outlines the possiblity with hooks, console, runHook and the other options that are possible for this plugin.
 
 ```js
 const WebpackNugetPlugin = require('webpack-nuget-plugin');
@@ -56,7 +58,10 @@ module.exports = {
             solutionPath : undefined,
             // can use mono if needed (will only use this if it's provided)
             monoPath: null,
+            // default arguments
+            args : ['restore'],
             // can pass additional arguments to the nuget exe as it's executed
+            // http://docs.nuget.org/docs/reference/command-line-reference
             additionalArgs: [],
             // custom callbacks to the output console
 			outputConsole : {
@@ -64,8 +69,8 @@ module.exports = {
 				error: console.error
             },
             // custom hook to be able to run the restore at an alternate time instead of compile time
-            // @see Custom runRestore method examples below
-			runRestore(compiler, run) {
+            // @see Custom runHook method examples below
+			runHook(compiler, run) {
 				compiler.hooks.compile.tap('WebpackNuget', run);
             },
             hooks: {
@@ -84,7 +89,7 @@ module.exports = {
 }
 ```
 
-### Custom Run Restore Function
+### Custom Run Hook
 By default this plugin will run before a new compilation is created, there's a wide range of [hooks available from Webpack](https://webpack.js.org/api/compiler-hooks/), By default we use 'compile'.
 
 ```js
@@ -97,7 +102,7 @@ module.exports = {
         new WebpackNugetPlugin({
             // the solution path to run nuget restore on
             solutionPath : 'path/to/solution.sln',
-			runRestore(compiler, run) {
+			runHook(compiler, run) {
                 // compiler.hooks.compile.tap('WebpackNuget', run);
                 // instead of running before compilition, now we're running after compilation
                 // just make sure you understand the tap libarary the webpack's core hook functionality
