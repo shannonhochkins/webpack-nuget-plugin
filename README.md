@@ -1,40 +1,82 @@
 [![npm version](https://badge.fury.io/js/webpack-nuget-plugin.svg)](https://badge.fury.io/js/webpack-nuget-plugin)
 ![](https://reposs.herokuapp.com/?path=1337programming/webpack-nuget-plugin)
 [![npm](https://img.shields.io/npm/dm/webpack-nuget-plugin.svg)]()
-# Webpack MSBuild Plugin
+# Webpack Nuget Plugin
 
-This plugin allows you to run msbuild scripts at a specific times using the Webpack compilation hooks. We can run multiple projects, a solution file or a combination of all at once. Script is fully configurable by the options object either at the hook level or at the project level.
+This plugin allows you to run nuget restore at a specific times using the Webpack compilation hooks. This plugin is shipped with the Nuget.exe so we don't have to find it, however you can also point to a different one using the configuration options.
 
 _This plugin was built for Windows 10 and Windows Server 2012 - it is not tested in any other OS and most likely will have issues. Written in Node v9 for webpack 4, webpack 3 won't work as they've changed the hook functionality (can work with very little work)_
 
 
 1. [Installation](#installation)
-2. [Setup](#setup)
-3. [Root API Options](#root-api-options)
-4. [Parent Hook API options](#parent-hook-api-options)
-5. [MSBuild Script Defaults](#msbuild-script-defaults)
-6. [Custom Logger](#custom-logger)
-7. [What is the output script it will generate?](#what-is-the-output-script-it-will-generate)
+2. [Setup Basic](#setup-basic)
+3. [Setup Advanced](#setup-advanced)
+4. [Custom Run Restore Function](#custom-run-restore-function)
+5. [Custom Logger](#custom-logger)
 
 _
 ## Installation
 
 `npm install webpack-nuget-plugin`
 
-## Setup
+## Setup Basic
 
-Building a project file when webpack has finished compilation, In `webpack.config.js`:
+Simplest configuration a nuget restore which will run when webpack has finished compilation will happen by using the restore, (you can also change _when_ the `runRestore` method) In `webpack.config.js`:
 
 ```js
-const WebpackMSBuildPlugin = require('webpack-nuget-plugin');
+const WebpackNugetPlugin = require('webpack-nuget-plugin');
 
 module.exports = {
     ...
     ...
     plugins: [
-        new WebpackMSBuildPlugin({
-            onWebpackDone: {                        
-                projects: ['path/to/project.csproj']
+        new WebpackNugetPlugin({
+            solutionPath: 'path/to/project.sln'
+        })
+    ],
+    ...
+}
+```
+
+## Setup Advanced
+
+Extended functionality/configuration and all their defaults, this outlines the possiblity with hooks, console, runRestore and the other options that are possible for this plugin.
+
+```js
+const WebpackNugetPlugin = require('webpack-nuget-plugin');
+
+module.exports = {
+    ...
+    ...
+    plugins: [
+        new WebpackNugetPlugin({
+            // reference nuget.exe or overwrite
+            nugetPath : path.resolve(__dirname, './nuget.exe'),
+            // the solution path to run nuget restore on
+            solutionPath : undefined,
+            // can use mono if needed (will only use this if it's provided)
+            monoPath: null,
+            // can pass additional arguments to the nuget exe as it's executed
+            additionalArgs: [],
+            // custom callbacks to the output console
+			outputConsole : {
+				log : console.log,
+				error: console.error
+            },
+            // custom hook to be able to run the restore at an alternate time instead of compile time
+            // @see Custom runRestore method examples below
+			runRestore(compiler, run) {
+				compiler.hooks.compile.tap('WebpackNuget', run);
+            },
+            hooks: {
+                // will call just before the nuget.exe file is executed
+                onStart: (data) => {},
+                // will call whenever the plugin spits out any output
+                onData: (data) => {},
+                // will call whenever there's an issue thrown by the plugin
+                onError: (data) => {},
+                // will call when the plugin has successfully completed
+                onDone: (data) => {}
             }
         })
     ],
@@ -42,162 +84,44 @@ module.exports = {
 }
 ```
 
-If you need to configure your msbuild script with specifc options, you can do this by adding an options object which will apply to all your projects in the array:
+### Custom Run Restore Function
+By default this plugin will run before a new compilation is created, there's a wide range of [hooks available from Webpack](https://webpack.js.org/api/compiler-hooks/), By default we use 'compile'.
 
 ```js
-const WebpackMSBuildPlugin = require('webpack-nuget-plugin');
+const WebpackNugetPlugin = require('webpack-nuget-plugin');
 
 module.exports = {
     ...
     ...
     plugins: [
-        new WebpackMSBuildPlugin({
-            onWebpackDone: {      
-                options : {
-                    targets: !this.env.dev ? ["Clean", "Build"] : ["Build"],
-                    configuration: !this.env.dev ? 'Release' : 'Debug',
-                    verbosity: 'detailed',
-                    maxcpucount: 0,
-                    toolsVersion: 14.0
-                },
-                projects: ['path/to/project.csproj']
+        new WebpackNugetPlugin({
+            // the solution path to run nuget restore on
+            solutionPath : 'path/to/solution.sln',
+			runRestore(compiler, run) {
+                // compiler.hooks.compile.tap('WebpackNuget', run);
+                // instead of running before compilition, now we're running after compilation
+                // just make sure you understand the tap libarary the webpack's core hook functionality
+                // is build from: https://github.com/webpack/tapable
+                compiler.hooks.compilation.tap('WebpackNuget', run);
             }
         })
     ],
     ...
 }
 ```
-
-It will automatically attempt to locate the msbuild.exe file, if it can't you can always use the `msbuildPath` option inside your options object, it will automatically execute and generate a script from your options, the above example will generate the script below which extends the options object with the [Script Defaults](#msbuild-script-defaults), want to see what your script will output? [see here](#what-is-the-output-script-it-will-generate)
-
-```bash
-"C:/Program Files (x86)/MSBuild/14.0/Bin/amd64/MSBuild.exe path/to/project.csproj /target:Release /verbosity:detailed /target:Release /toolsversion:14.0 /nologo /maxcpucount /property:Configuration=Release"
-```
-
-### Root API Options
-* `onWebpackPre`: Configuration object for the script generator to execute before compilation **Default: {}**
-* `onWebpackPost`: Configuration object for the script generator to execute after files are emitted at the end of the compilation. **Default: {}**
-* `onWebpackDone`: Configuration object for the script generator to execute after Webpack's process is complete. *Note: this event also fires in `webpack --watch` when webpack has finished updating the bundle.* **Default: {}**
-* `outputConsole`: By default the script will write to the console, but you can either overwrite the default output functionality or use a [Custom Logger](#custom-logger).  **Default: {log: console.log, error: console.error}**
-
-
-### Parent Hook API options
-**onWebpackPre**, **onWebpackPost**, **onWebpackDone**
-
-These three parent hook configuration objects all have the same functionality, they just execute at different times, here's an extended demo of what options
-are available for EACH parent hook.
-
-```js
-const WebpackMSBuildPlugin = require('webpack-nuget-plugin');
-
-module.exports = {
-    ...
-    ...
-    plugins: [
-        new WebpackMSBuildPlugin({
-            onWebpackDone: {      
-                // will extend the script defaults
-                options : {
-                    targets: !this.env.dev ? ["Clean", "Build"] : ["Build"],
-                    configuration: !this.env.dev ? 'Release' : 'Debug',
-                    verbosity: 'detailed',
-                    maxcpucount: 0,
-                    toolsVersion: 14.0
-                },
-                // if true, it will attempt to run all scripts in parallel, this requires you to
-                // have all your targets and dependencies setup correctly.
-                parallel: true|false
-                // projects can be specified as a string if you don't need to use hooks per project
-                projects: ['path/to/project.csproj'],
-                // or as array of object(s) (or combination of both)
-                projects: ['path/to/project.csproj', {
-                    // path to prokect
-                    project : 'path/to/project.csproj',                
-                    // will extend the onWebpackDone.options object
-                    options : {
-                        verbosity: 'quiet'
-                    },
-                    // we can bind to individual project hooks here
-                    hooks: {
-                        onStart(data) {
-                            // called when this particular project starts building
-                        },
-                        onData(data) {
-                            // called whenever the child process stdout or stderr receives output
-                            // from the msbuild script
-                        },
-                        onError(data) {
-                            // if there's any issues, it will raise them here.
-                        },
-                        onDone(data) {
-                            // called when this particular project has finished building
-                        },
-                    }
-                }],
-                hooks : {
-                    onStart(data) {
-                        // called when all the project scripts have been setup and are about to start executing
-                    },
-                    onProgress(data) {
-                        // only called if there's more than 1 project, it will basically recieve data telling the output console
-                        // how many projects are left, this is called at the END of a single script executing
-                    },
-                    onError(data) {
-                        // if there's any errors in the script
-                    },
-                    onDone(data) {
-                        // when all projects have executed successfully
-                    }
-                }
-            }
-        })
-    ],
-  ...
-}
-```
-
-
-
-### MSBuild Script Defaults
-
-The options object (per parent hook) group, will extend the following defaults for the msbuild script, most of these options are all [documented here](https://msdn.microsoft.com/en-us/library/ms164311.aspx).
-```js
-{
-    targets: ['Rebuild'],
-    configuration: 'Release',
-    toolsVersion: 14.0,
-    properties: {},
-    verbosity: 'normal',
-    maxcpucount: 0,
-    nologo: true,
-    platform: process.platform,
-    architecture: detectArchitecture(),
-    windir: process.env.WINDIR,
-    // absolute path to the msbuild executable
-    msbuildPath: '',
-    fileLoggerParameters: undefined,
-    consoleLoggerParameters: undefined,
-    loggerParameters: undefined,
-    nodeReuse: true,
-    // we're able to push in custom flags to the script using this array, each option should be a string
-    customArgs: [],
-    // will add the Platform property to the properties object automatically
-    solutionPlatform: null
-}
-```
-
 
 ### Custom Logger
 If you want to stop the plugin logging out to the console, or replace it with your own logger:
 
 ```js
-const WebpackMSBuildPlugin = require('webpack-nuget-plugin');
+const WebpackNugetPlugin = require('webpack-nuget-plugin');
 
 module.exports = {
     ...
     ...
     plugins: [
-        new WebpackMSBuildPlugin({
+        new WebpackNugetPlugin({
+            solutionPath : `path/to/solution.sln`,
             outputConsole: {
                 log(data) {
                     // data is an object, containing a type, msg and extra data like what project is sending the output, 
@@ -215,37 +139,6 @@ module.exports = {
   ...
 }
 ```
-
-
-
-### What is the output script it will generate?
-It's easy to tell, we can write a very simple function to intercept the script before it's executed:
-
-```js
-const WebpackMSBuildPlugin = require('webpack-nuget-plugin');
-
-module.exports = {
-    ...
-    ...
-    plugins: [
-        new WebpackMSBuildPlugin({
-            onWebpackDone: {                        
-                projects: [{
-                    project: 'path/to/project.csproj',
-                    hooks : {
-                        onStart(data) {
-                            // this will basically log out a script you should be able to copy and paste into a CLI and watch it run manually.
-                            console.log(data.project.script.executable,data.project.script.args.join(' '))
-                        }
-                    }
-                }]
-            }
-        })
-    ],
-  ...
-}
-```
-
 
 ### Development
 

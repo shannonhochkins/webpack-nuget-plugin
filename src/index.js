@@ -24,16 +24,17 @@ export default class Nuget {
             },
             // custom hook to be able to run the restore at an alternate time instead of compile time
 			runRestore(compiler, run) {
-                const $plugin = 'WebpackNuget';
-				compiler.hooks.compile.tap($plugin, compilation => {
-					run();
-				});
+				compiler.hooks.compile.tap('WebpackNuget', run);
             },
             hooks: {
-                onStart: () => {},
-                onData: () => {},
-                onError: () => {},
-                onDone: () => {}
+                // will call just before the nuget.exe file is executed
+                onStart: (data) => {},
+                // will call whenever the plugin spits out any output
+                onData: (data) => {},
+                // will call whenever there's an issue thrown by the plugin
+                onError: (data) => {},
+                // will call when the plugin has successfully completed
+                onDone: (data) => {}
             }
         };
         // if we need to know 
