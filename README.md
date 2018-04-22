@@ -1,6 +1,5 @@
 [![npm version](https://badge.fury.io/js/webpack-nuget-plugin.svg)](https://badge.fury.io/js/webpack-nuget-plugin)
-![](https://reposs.herokuapp.com/?path=1337programming/webpack-nuget-plugin)
-[![npm](https://img.shields.io/npm/dm/webpack-nuget-plugin.svg)]()
+[![npm](https://img.shields.io/npm/dt/webpack-nuget-plugin.svg)]()
 # Webpack Nuget Plugin
 
 This plugin allows you to run nuget restore at a specific times using the Webpack compilation hooks. This plugin is shipped with the Nuget.exe (v3.4.4.1321)so we don't have to automatically locate it, however you can also point to a different one using the configuration options.
